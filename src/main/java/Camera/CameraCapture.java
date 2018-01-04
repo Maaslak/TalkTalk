@@ -1,4 +1,6 @@
-import org.opencv.core.Core;
+package Camera;
+
+import GUI.Client;
 import org.opencv.core.Mat;
 import org.opencv.highgui.*;
 
@@ -15,21 +17,27 @@ public class CameraCapture {
     private BufferedImage image;
     private Mat frame;
 
+    private Client gui;
+
     public CameraCapture() {
         //System.loadLibrary(Core.NATIVE_LIBRARY_NAME);
+        nu.pattern.OpenCV.loadLibrary();
         camera = new VideoCapture(0);
+
         frame = new Mat();
         camera.read(frame);
 
-        if (!camera.isOpened()) {
+        if (!camera.isOpened())
             System.out.println("Error");
-        } else {
-            while (true) {
-                if (camera.read(frame)) {
-                    image = MatToBufferedImage(frame);
-                }
-            }
+
+    }
+
+    public BufferedImage getImage(){
+        if (camera.read(frame)) {
+            image = MatToBufferedImage(frame);
+            return image;
         }
+        return null;
     }
 
     /** Converts Mat to BufferedImage
@@ -52,7 +60,4 @@ public class CameraCapture {
         return image;
     }
 
-    public BufferedImage getImage() {
-        return image;
-    }
 }
