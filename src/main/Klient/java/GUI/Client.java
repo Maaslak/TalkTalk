@@ -11,7 +11,7 @@ public class Client {
     private JFrame frame;
 
     public Client() {
-        frame = new JFrame("Hello");
+        frame = new JFrame("ConferencePanel");
         frame.setContentPane(generalPanel);
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         frame.pack();
@@ -20,10 +20,14 @@ public class Client {
 
     public void setImage(BufferedImage image){
         ((ConferencePanel)conferencePanel).setImage(image);
+        conferencePanel.repaint();
     }
 
     private void createUIComponents() {
         // place custom component creation code here
         conferencePanel = new ConferencePanel();
+
+        //conferencePanel.revalidate();
+
     }
 }

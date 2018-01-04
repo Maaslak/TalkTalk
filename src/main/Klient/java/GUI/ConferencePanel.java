@@ -13,6 +13,9 @@ public class ConferencePanel extends JPanel{
 
     @Override
     public void paint(Graphics g) {
-        g.drawImage(image, 0, 0, this);
+        super.paint(g);
+        if(image != null) {
+            g.drawImage(image, 20, 20, this);
+        }
     }
 }
