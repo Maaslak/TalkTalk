@@ -3,6 +3,7 @@ package Camera;
 import GUI.Client;
 import org.opencv.core.Mat;
 import org.opencv.highgui.*;
+import sun.awt.Mutex;
 
 import java.awt.image.BufferedImage;
 import java.awt.image.DataBufferByte;
@@ -10,18 +11,27 @@ import java.awt.image.WritableRaster;
 
 
 
-public class CameraCapture {
+public class CameraCapture implements Runnable{
 
     private VideoCapture camera;
 
     private BufferedImage image;
+
     private Mat frame;
 
     private Client gui;
 
-    public CameraCapture() {
-        //System.loadLibrary(Core.NATIVE_LIBRARY_NAME);
+
+
+    public CameraCapture(Client gui) {
+        this.gui = gui;
         nu.pattern.OpenCV.loadLibrary();
+        initCamera();
+    }
+
+    /**Initialize camera
+     */
+    public void initCamera(){
         camera = new VideoCapture(0);
 
         frame = new Mat();
@@ -29,15 +39,26 @@ public class CameraCapture {
 
         if (!camera.isOpened())
             System.out.println("Error");
-
     }
 
-    public BufferedImage getImage(){
+    public void releaseCamera(){
+        camera.release();
+    }
+
+    public void openCamera(){
+        camera.open(0);
+    }
+
+
+    /**
+     * Reads camera image
+     */
+    private void readImage(){
         if (camera.read(frame)) {
             image = MatToBufferedImage(frame);
-            return image;
         }
-        return null;
+        else
+            System.out.println("Couldnt read camera input");
     }
 
     /** Converts Mat to BufferedImage
@@ -60,4 +81,11 @@ public class CameraCapture {
         return image;
     }
 
+
+    public void run() {
+        while (true){
+            readImage();
+            gui.setImage(image);
+        }
+    }
 }
