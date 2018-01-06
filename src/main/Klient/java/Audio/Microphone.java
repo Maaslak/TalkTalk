@@ -11,7 +11,7 @@ public class Microphone implements Runnable {
 
     private byte[] data;
     private int numBytesRead;
-    private boolean stopped;
+    private boolean closed;
     private Speakers speaker;
     private Mutex dataMutex;
     private Mutex numBytesMutex;
@@ -31,13 +31,13 @@ public class Microphone implements Runnable {
             e.printStackTrace();
         }
         data = new byte[microphone.getBufferSize() / 5];
-        stopped = false;
+        closed = false;
     }
 
     public void start() {
         microphone.start();
         AudioInputStream audio_input_stream = new AudioInputStream(microphone);
-        while(!stopped) {
+        while (!closed) {
             numBytesMutex.lock();
             dataMutex.lock();
             numBytesRead = microphone.read(data, 0, data.length);
@@ -46,7 +46,11 @@ public class Microphone implements Runnable {
 
             speaker.play(data, numBytesRead);
         }
-        microphone.stop();
+        microphone.close();
+    }
+
+    public void close() {
+        closed = true;
     }
 
     public byte[] getData() {

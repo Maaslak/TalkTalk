@@ -22,6 +22,10 @@ public class Speakers {
         }
     }
 
+    public void close() {
+        speaker.close();
+    }
+
 
     public void play(byte[] data, int numBytesRead) {
         speaker.write(data, 0, numBytesRead);

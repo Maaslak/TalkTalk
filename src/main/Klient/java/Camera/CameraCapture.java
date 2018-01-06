@@ -20,11 +20,17 @@ public class CameraCapture implements Runnable{
 
     private Conference gui;
 
+    private Thread myThread;
 
-    public CameraCapture(Conference gui) {
-        this.gui = gui;
-        nu.pattern.OpenCV.loadLibrary();
+    private boolean disconnect = false;
+
+
+    public CameraCapture() {
         initCamera();
+    }
+
+    public void setGui(Conference gui) {
+        this.gui = gui;
     }
 
     /**Initialize camera
@@ -33,20 +39,23 @@ public class CameraCapture implements Runnable{
         camera = new VideoCapture(0);
 
         frame = new Mat();
-        camera.read(frame);
+        //camera.read(frame);
 
         if (!camera.isOpened())
             System.out.println("Error");
     }
 
     public void releaseCamera(){
-        camera.release();
+        disconnect = true;
     }
 
     public void openCamera(){
         camera.open(0);
     }
 
+    public void setMyThread(Thread myThread) {
+        this.myThread = myThread;
+    }
 
     /**
      * Reads camera image
@@ -81,9 +90,11 @@ public class CameraCapture implements Runnable{
 
 
     public void run() {
-        while (true){
+        while (!disconnect) {
             readImage();
             gui.setImage(image);
         }
+
+        camera.release();
     }
 }
