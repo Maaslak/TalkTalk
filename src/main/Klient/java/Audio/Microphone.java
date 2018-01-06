@@ -1,9 +1,11 @@
 package Audio;
 
+import sun.awt.Mutex;
+
 import javax.sound.sampled.*;
 
 
-public class Microphone {
+public class Microphone implements Runnable {
     private AudioFormat format;
     private TargetDataLine microphone;
 
@@ -11,13 +13,19 @@ public class Microphone {
     private int numBytesRead;
     private boolean stopped;
     private Speakers speaker;
+    private Mutex dataMutex;
+    private Mutex numBytesMutex;
 
-    public Microphone(Speakers speaker) {
+    public Microphone(Speakers speaker, AudioFormat format) {
         this.speaker = speaker;
         //out = new ByteArrayOutputStream()
-        format = new AudioFormat(8000.0f, 16, 1, true, true);
+        this.format = format;
+        dataMutex = new Mutex();
+        numBytesMutex = new Mutex();
+        DataLine.Info info = new DataLine.Info(TargetDataLine.class, format);
         try {
-            microphone = AudioSystem.getTargetDataLine(format);
+            if (!AudioSystem.isLineSupported(info)) throw new LineUnavailableException();
+            microphone = (TargetDataLine) AudioSystem.getLine(info);
             microphone.open(format);
         } catch (LineUnavailableException e) {
             e.printStackTrace();
@@ -28,18 +36,36 @@ public class Microphone {
 
     public void start() {
         microphone.start();
-
-        System.out.println("Start capturing");
         AudioInputStream audio_input_stream = new AudioInputStream(microphone);
-        System.out.println("Start recording");
         while(!stopped) {
+            numBytesMutex.lock();
+            dataMutex.lock();
             numBytesRead = microphone.read(data, 0, data.length);
-            speaker.setData(data);
+            dataMutex.unlock();
+            numBytesMutex.unlock();
+
+            speaker.play(data, numBytesRead);
         }
         microphone.stop();
+    }
 
-        System.out.println("Number of bytes: " + numBytesRead);
-        System.out.println("Finished");
+    public byte[] getData() {
+        byte[] temp;
+        dataMutex.lock();
+        temp = data.clone();
+        dataMutex.unlock();
+        return temp;
+    }
 
+    public int getNumBytesRead() {
+        int temp;
+        numBytesMutex.lock();
+        temp = numBytesRead;
+        numBytesMutex.unlock();
+        return numBytesRead;
+    }
+
+    public void run() {
+        this.start();
     }
 }

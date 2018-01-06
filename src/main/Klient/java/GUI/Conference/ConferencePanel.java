@@ -1,4 +1,4 @@
-package GUI;
+package GUI.Conference;
 
 import javax.swing.*;
 import java.awt.*;

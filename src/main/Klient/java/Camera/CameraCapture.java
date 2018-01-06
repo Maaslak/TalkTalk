@@ -1,9 +1,8 @@
 package Camera;
 
-import GUI.Client;
+import GUI.Conference.Conference;
 import org.opencv.core.Mat;
 import org.opencv.highgui.*;
-import sun.awt.Mutex;
 
 import java.awt.image.BufferedImage;
 import java.awt.image.DataBufferByte;
@@ -19,11 +18,10 @@ public class CameraCapture implements Runnable{
 
     private Mat frame;
 
-    private Client gui;
+    private Conference gui;
 
 
-
-    public CameraCapture(Client gui) {
+    public CameraCapture(Conference gui) {
         this.gui = gui;
         nu.pattern.OpenCV.loadLibrary();
         initCamera();

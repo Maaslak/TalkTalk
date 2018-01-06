@@ -1,16 +1,15 @@
-package GUI;
+package GUI.Conference;
 
 import javax.swing.*;
-import java.awt.*;
 import java.awt.image.BufferedImage;
 
-public class Client {
+public class Conference {
     private JButton exitButton;
     private JPanel generalPanel;
     private JPanel conferencePanel;
     private JFrame frame;
 
-    public Client() {
+    public Conference() {
         frame = new JFrame("ConferencePanel");
         frame.setContentPane(generalPanel);
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);

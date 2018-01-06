@@ -4,46 +4,26 @@ import javax.sound.sampled.*;
 import java.io.*;
 
 
-public class Speakers implements Runnable{
+public class Speakers {
 
+    private DataLine.Info info;
+    private SourceDataLine speaker;
+    private AudioFormat format;
 
-    private boolean stopped;
-    private byte[] data;
-    private ByteArrayOutputStream audioOutputStream;
-
-    public Speakers() {
-        this.stopped = false;
-    }
-
-    public void setData(byte[] data) {
-        this.data = data;
-    }
-
-    public void run() {
-        InputStream byteArrayInputStream
-                = new ByteArrayInputStream(
-                data);
-        AudioFormat format = new AudioFormat(8000.0f, 16, 1, true, true);
-        AudioInputStream audioInputStream =
-                new AudioInputStream(
-                        byteArrayInputStream,
-                        format,
-                        data.length/format.
-                                getFrameSize());
-        DataLine.Info dataLineInfo =
-                new DataLine.Info(
-                        SourceDataLine.class,
-                        format);
+    public Speakers(AudioFormat format) {
+        this.format = format;
+        info = new DataLine.Info(SourceDataLine.class, format);
         try {
-            SourceDataLine sourceDataLine = (SourceDataLine)
-                AudioSystem.getLine(
-                        dataLineInfo);
-            sourceDataLine.open(format);
-            sourceDataLine.start();
+            speaker = (SourceDataLine) AudioSystem.getLine((info));
+            speaker.open(format);
+            speaker.start();
         } catch (LineUnavailableException e) {
             e.printStackTrace();
         }
-
     }
 
+
+    public void play(byte[] data, int numBytesRead) {
+        speaker.write(data, 0, numBytesRead);
+    }
 }
