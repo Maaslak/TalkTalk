@@ -43,5 +43,12 @@ public class MainWindow {
         });
 
 
+        exitButton.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseClicked(MouseEvent e) {
+                super.mouseClicked(e);
+                System.exit(0);
+            }
+        });
     }
 }

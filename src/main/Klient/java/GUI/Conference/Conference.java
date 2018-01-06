@@ -11,9 +11,9 @@ import java.awt.event.WindowEvent;
 import java.awt.image.BufferedImage;
 
 public class Conference {
-    private JButton exitButton;
     private JPanel generalPanel;
     private JPanel conferencePanel;
+    private JButton discconnectButton;
     private JFrame frame;
     private JFrame father;
     private static CameraCapture camera;
