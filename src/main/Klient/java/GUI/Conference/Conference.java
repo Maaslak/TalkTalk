@@ -3,14 +3,18 @@ package GUI.Conference;
 import Audio.Microphone;
 import Audio.Speakers;
 import Camera.CameraCapture;
+import Connection.*;
 
 import javax.sound.sampled.AudioFormat;
 import javax.swing.*;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 import java.awt.image.BufferedImage;
+import java.io.IOException;
 
-public class Conference {
+public class Conference implements Runnable {
     private JPanel generalPanel;
     private JPanel conferencePanel;
     private JButton discconnectButton;
@@ -20,9 +24,11 @@ public class Conference {
     static private Microphone mic;
     static private Speakers speaker;
     static private AudioFormat format;
+    private Connection connection;
 
-    public Conference(final JFrame father, CameraCapture camera) {
+    public Conference(final JFrame father, CameraCapture camera, final Connection connection) {
         this.father = father;
+        this.connection = connection;
         frame = new JFrame("ConferencePanel");
         frame.setContentPane(generalPanel);
         frame.pack();
@@ -49,6 +55,21 @@ public class Conference {
 
         Thread mic_thread = new Thread(mic);
         mic_thread.start();
+        discconnectButton.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseClicked(MouseEvent e) {
+                super.mouseClicked(e);
+                Message msg = new Message();
+                msg.setString("Disconnect");
+                try {
+                    connection.write(msg);
+                } catch (IOException e1) {
+                    e1.printStackTrace();
+                }
+                //TODO Accept the disconecting
+                frame.dispose();
+            }
+        });
     }
 
     public void setImage(BufferedImage image){
@@ -57,10 +78,22 @@ public class Conference {
     }
 
     private void createUIComponents() {
-        // place custom component creation code here
         conferencePanel = new ConferencePanel();
+    }
 
-        //conferencePanel.revalidate();
-
+    public void run() {
+        try {
+            while (true) {
+                Message message = connection.readMassage();
+                if (message.getType() == 'i')
+                    setImage(message.getImage());
+                if (message.getType() == 'v')
+                    speaker.play(message.getVoice(), message.getVoice().length);
+                if (message.getType() == 's')
+                    System.out.println(message.getString());
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 }

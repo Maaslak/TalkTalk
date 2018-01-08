@@ -1,5 +1,7 @@
 package Camera;
 
+import Connection.Connection;
+import Connection.Message;
 import GUI.Conference.Conference;
 import org.opencv.core.Mat;
 import org.opencv.highgui.*;
@@ -7,7 +9,8 @@ import org.opencv.highgui.*;
 import java.awt.image.BufferedImage;
 import java.awt.image.DataBufferByte;
 import java.awt.image.WritableRaster;
-
+import java.io.IOException;
+import java.rmi.ConnectException;
 
 
 public class CameraCapture implements Runnable{
@@ -24,8 +27,11 @@ public class CameraCapture implements Runnable{
 
     private boolean disconnect = false;
 
+    private Connection connection;
 
-    public CameraCapture() {
+
+    public CameraCapture(Connection connection) {
+        this.connection = connection;
         initCamera();
     }
 
@@ -92,7 +98,14 @@ public class CameraCapture implements Runnable{
     public void run() {
         while (!disconnect) {
             readImage();
-            gui.setImage(image);
+            Message cameramsg = new Message();
+            cameramsg.setImage(image);
+            try {
+                connection.write(cameramsg);
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+            //gui.setImage(image);
         }
 
         camera.release();
