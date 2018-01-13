@@ -18,7 +18,7 @@
 #include <pthread.h>
 
 
-#define SERVER_PORT 1328
+#define SERVER_PORT 1334
 #define QUEUE_SIZE 5
 #define BUFSIZE 4
 
@@ -39,7 +39,7 @@ struct klient
     string login;
     int readsocket;
     int writesocket;
-    char flag[1];
+    char flag;
     char length_bit[BUFSIZE];
     int length;
     char* message;
@@ -70,16 +70,16 @@ void lenToMessage(int len, char* message){
 }
 
 void write_mes(struct klient* k1){
-    if(k1->flag != "s"){
-        write(k1->writesocket,k1->flag,1);
+    if(k1->flag != 's'){
+        write(k1->writesocket,&(k1->flag),1);
         write(k1->writesocket,k1->length_bit,BUFSIZE);
         write(k1->writesocket,k1->message,k1->length);
     }
 }
 
 void write_mes(struct klient* k1,char* mes, int len){
-    if(k1->flag == "s"){
-        write(k1->readsocket,k1->flag,1);
+    if(k1->flag == 's'){
+        write(k1->readsocket,&(k1->flag),1);
         char mess_length[BUFSIZE];
         lenToMessage(len, mess_length);
         write(k1->readsocket,mess_length,BUFSIZE);
@@ -88,12 +88,19 @@ void write_mes(struct klient* k1,char* mes, int len){
 }
 
 void read_mes(struct klient* k1){
-    read(k1->readsocket,k1->flag,1);
+    read(k1->readsocket,&(k1->flag),1);
     read(k1->readsocket,k1->length_bit,BUFSIZE);
     k1->length = lenOfMessage(k1->length_bit);
-    char temp[k1->length];
-    read(k1->readsocket,temp,k1->length);
-    k1->message = &temp[k1->length];
+    k1->message = new char[k1->length];
+    read(k1->readsocket,k1->message,k1->length);
+}
+
+void read_mes(struct klient* k1, char flag){
+    k1->flag = flag;
+    read(k1->readsocket,k1->length_bit,BUFSIZE);
+    k1->length = lenOfMessage(k1->length_bit);
+    k1->message = new char[k1->length];
+    read(k1->readsocket,k1->message,k1->length);
 }
 
 void *write_messages(void *k1){
@@ -101,10 +108,16 @@ void *write_messages(void *k1){
     struct klient *thread_k1 = (struct klient*)k1;
         
     while(thread_k1->talk == true){
-        pthread_mutex_lock(&mutexsr);
+        //pthread_mutex_lock(&mutexsr);
         //write(thread_k1->writesocket, thread_k1->buffer, BUFSIZE);
+        read_mes(thread_k1);
+        if(thread_k1->flag == 's')
+             if(thread_k1->message == "exit")
+                thread_k1->talk = false;
         write_mes(thread_k1);
-        pthread_mutex_unlock(&mutexsr);
+        delete(thread_k1->message);
+        //pthread_mutex_unlock(&mutexsr);
+        //sleep(10);
     }
     
     free(thread_k1);
@@ -114,19 +127,22 @@ void *write_messages(void *k1){
 
 void read_messages(struct klient* k1){
     while(k1->talk == true){
+    /*
         pthread_mutex_lock(&mutexsr);
         read_mes(k1);
-        if(k1->flag == "s")
+        if(k1->flag == 's')
             if(k1->message == "exit")
                 k1->talk = false;
+        delete(k1->message);
         pthread_mutex_unlock(&mutexsr);
-        sleep(100);
+        sleep(10);
+        */
     }
 }
 
 void talk(struct klient* k1){
     k1->talk = true;
-    
+
     pthread_t thread1;
     
     int create_result = pthread_create(&thread1, NULL, write_messages, (void *)k1);
@@ -134,7 +150,7 @@ void talk(struct klient* k1){
        printf("Błąd przy próbie utworzenia wątku, kod błędu: %d\n", create_result);
        exit(-1);
     }
-    
+
     read_messages(k1);
 }
 
@@ -142,7 +158,6 @@ void log_in(struct klient* k1){
     do{
         read_mes(k1);
         bool autoryzacja=false;
-        
         for(int i=0; i<loginy.size(); i++){
             if(loginy[i]==k1->message){
                 autoryzacja=true;
@@ -158,16 +173,18 @@ void log_in(struct klient* k1){
         
         if (autoryzacja){
             k1->available = true;
-            char temp[]= "zalogowany";
-            write_mes(k1,temp,10);
+            char temp[]= "ok";
+            write_mes(k1,temp,2);
             cout << "Uzytkownik " << k1->login << " zalogowany" << endl;
         }
         else{
+            k1-> flag = 's';
             char temp[] = "bledny login";
             write_mes(k1,temp,12);
-            cout << "Niepoprawny login" << endl;
+            cout << "Niepoprawny login: " << k1->message << endl;
         }
     }while(k1->available == false);
+    delete(k1->message);
 }
 
 void find_somebody_and_call(struct klient* k1){
@@ -178,12 +195,13 @@ void find_somebody_and_call(struct klient* k1){
             k1->connected = false;
         }
         //czytanie loginu osoby z ktora chcemy rozmawiac
-        
-        if(recv(k1->readsocket, k1->length_bit,BUFSIZE,MSG_DONTWAIT)>0){
+        char flag;
+        if(recv(k1->readsocket, &flag,1,MSG_DONTWAIT)>0){
             k1->connected = true;
-            k1->length = lenOfMessage(k1->length_bit);
-            char login_adresata[k1->length];
-            read(k1->readsocket,login_adresata,k1->length);
+            read_mes(k1, flag);
+            char login_adresata[k1->length+1];
+            strcpy(login_adresata, k1->message);
+            delete(k1->message);
             cout << "odczytany login adresata: " << login_adresata << endl;
             
             bool czy_zalogowany=false;
@@ -212,6 +230,7 @@ void find_somebody_and_call(struct klient* k1){
             else{
                 cout << "Nie udalo sie polaczyc" << endl;
                 char temp[] = "Nie ma takiego uzytkownika lub jest zajety";
+                k1->flag = 's';
                 write_mes(k1,temp,42);
             }
         }
@@ -260,6 +279,7 @@ int main(int argc, char* argv[])
     }
     else{
         cout << "Nie udalo sie otworzyc pliku" << endl;
+        exit(1);
     }
 
    //inicjalizacja gniazda serwera

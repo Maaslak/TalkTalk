@@ -58,14 +58,20 @@ public class MainWindow {
 
                     Message targetname = new Message();
                     String targetuser = (String) node.getUserObject();
+                    targetuser += '\0';
                     targetname.setString(targetuser);
                     connection.write(targetname);
                     Message msg = connection.readMassage();
                     msg.updateMessage(connection.getInputBuffer());
-                    if (msg.getString().equals("Polaczono!")) ;
-                    conference = new Conference(frame, camera, connection);
-                    camera.setGui(conference);
-                    frame.setVisible(false);
+                    if (msg.getString().equals("Polaczono!")) {
+                        conference = new Conference(frame, camera, connection);
+                        Thread thread = new Thread(conference);
+                        thread.start();
+                        camera.setGui(conference);
+                        frame.setVisible(false);
+                    } else {
+                        throw new IOException("Err");
+                    }
                 } catch (IOException e1) {
                     e1.printStackTrace();
                     output.setText("Cannot establish connection");

@@ -1,8 +1,13 @@
 package Audio;
 
+import Connection.Connection;
+import Connection.Message;
+import GUI.Connect.Connect;
 import sun.awt.Mutex;
+import sun.awt.windows.ThemeReader;
 
 import javax.sound.sampled.*;
+import java.io.IOException;
 
 
 public class Microphone implements Runnable {
@@ -15,8 +20,10 @@ public class Microphone implements Runnable {
     private Speakers speaker;
     private Mutex dataMutex;
     private Mutex numBytesMutex;
+    private Connection connection;
 
-    public Microphone(Speakers speaker, AudioFormat format) {
+    public Microphone(Speakers speaker, AudioFormat format, Connection connection) {
+        this.connection = connection;
         this.speaker = speaker;
         //out = new ByteArrayOutputStream()
         this.format = format;
@@ -43,8 +50,19 @@ public class Microphone implements Runnable {
             numBytesRead = microphone.read(data, 0, data.length);
             dataMutex.unlock();
             numBytesMutex.unlock();
-
-            speaker.play(data, numBytesRead);
+            try {
+                Thread.sleep(100);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+            Message audio = new Message();
+            audio.setVoice(data);
+            try {
+                connection.write(audio);
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+            //speaker.play(data, numBytesRead);
         }
         microphone.close();
     }

@@ -45,9 +45,9 @@ public class Conference implements Runnable {
         });
 
         this.camera = camera;
-        format = new AudioFormat(44100, 16, 1, true, true);
+        format = new AudioFormat(8000, 8, 1, true, false);
         speaker = new Speakers(format);
-        mic = new Microphone(speaker, format);
+        mic = new Microphone(speaker, format, connection);
 
         Thread camera_thread = new Thread(camera);
         camera_thread.start();
@@ -60,12 +60,14 @@ public class Conference implements Runnable {
             public void mouseClicked(MouseEvent e) {
                 super.mouseClicked(e);
                 Message msg = new Message();
-                msg.setString("Disconnect");
+                msg.setString("exit");
                 try {
                     connection.write(msg);
                 } catch (IOException e1) {
                     e1.printStackTrace();
                 }
+                mic.close();
+                father.setVisible(true);
                 //TODO Accept the disconecting
                 frame.dispose();
             }
