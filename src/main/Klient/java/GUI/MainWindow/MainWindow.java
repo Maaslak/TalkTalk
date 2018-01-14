@@ -4,6 +4,7 @@ import Camera.CameraCapture;
 import Connection.Connection;
 import Connection.Message;
 import GUI.Conference.Conference;
+import sun.awt.Mutex;
 
 import javax.swing.*;
 import javax.swing.tree.DefaultMutableTreeNode;

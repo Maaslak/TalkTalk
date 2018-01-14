@@ -18,7 +18,7 @@
 #include <pthread.h>
 
 
-#define SERVER_PORT 1334
+#define SERVER_PORT 1336
 #define QUEUE_SIZE 5
 #define BUFSIZE 4
 
@@ -52,7 +52,7 @@ vector <string> loginy;
 
 unsigned int lenOfMessage(char* bytes){
     unsigned int len = 0;
-    int base = 1;
+    unsigned int base = 1;
     for(int i = 3; i>=0; i--){
             len+= base*(unsigned int)(bytes[i]);
             base *= 256;

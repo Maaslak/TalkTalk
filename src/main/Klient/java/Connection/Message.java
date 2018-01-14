@@ -18,6 +18,8 @@ public class Message {
     public Message() {
     }
 
+    //public void clear
+
     public void setImage(BufferedImage image) {
         this.image = image;
         type = 'i';

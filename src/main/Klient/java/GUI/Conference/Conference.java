@@ -4,6 +4,7 @@ import Audio.Microphone;
 import Audio.Speakers;
 import Camera.CameraCapture;
 import Connection.*;
+import sun.awt.Mutex;
 
 import javax.sound.sampled.AudioFormat;
 import javax.swing.*;
@@ -49,9 +50,9 @@ public class Conference implements Runnable {
         speaker = new Speakers(format);
         mic = new Microphone(speaker, format, connection);
 
-        Thread camera_thread = new Thread(camera);
-        camera_thread.start();
-        camera.setMyThread(camera_thread);
+        //Thread camera_thread = new Thread(camera);
+        //camera_thread.start();
+        //camera.setMyThread(camera_thread);
 
         Thread mic_thread = new Thread(mic);
         mic_thread.start();
