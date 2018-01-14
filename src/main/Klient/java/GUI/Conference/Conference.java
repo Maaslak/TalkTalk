@@ -26,7 +26,7 @@ public class Conference implements Runnable {
     static private AudioFormat format;
     private Connection connection;
 
-    public Conference(final JFrame father, CameraCapture camera, final Connection connection) {
+    public Conference(final JFrame father, final CameraCapture camera, final Connection connection) {
         this.father = father;
         this.connection = connection;
         frame = new JFrame("ConferencePanel");
@@ -61,6 +61,7 @@ public class Conference implements Runnable {
                 super.mouseClicked(e);
                 Message msg = new Message();
                 msg.setString("exit");
+                camera.setDisconnect(true);
                 try {
                     connection.write(msg);
                 } catch (IOException e1) {

@@ -1,6 +1,7 @@
 package Connection;
 
-import javax.imageio.ImageIO;
+import javax.imageio.*;
+import javax.imageio.stream.ImageOutputStream;
 import java.awt.image.BufferedImage;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -65,8 +66,20 @@ public class Message {
     private byte[] imageToBytes() {
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
         try {
-            ImageIO.write(image, "jpg", baos);
+            ImageOutputStream outputStream = ImageIO.createImageOutputStream(baos);
+            ImageWriter jpgWriter = ImageIO.getImageWritersByFormatName("jpg").next();
+
+
+            ImageWriteParam jpgWriteParam = jpgWriter.getDefaultWriteParam();
+            jpgWriteParam.setCompressionMode(ImageWriteParam.MODE_EXPLICIT);
+            jpgWriteParam.setCompressionQuality(0.5f);
+
+            jpgWriter.setOutput(outputStream);
+            jpgWriter.write(null, new IIOImage(image, null, null), jpgWriteParam);
+
+            //ImageIO.write(image, "jpg", baos);
             baos.flush();
+            jpgWriter.dispose();
             byte[] bytes = baos.toByteArray();
             baos.close();
             return bytes;

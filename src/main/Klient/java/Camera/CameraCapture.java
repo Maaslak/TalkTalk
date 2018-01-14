@@ -69,6 +69,7 @@ public class CameraCapture implements Runnable{
     private void readImage(){
         if (camera.read(frame)) {
             image = MatToBufferedImage(frame);
+
         }
         else
             System.out.println("Couldnt read camera input");
@@ -94,22 +95,29 @@ public class CameraCapture implements Runnable{
         return image;
     }
 
+    public void setDisconnect(boolean disconnect) {
+        this.disconnect = disconnect;
+    }
 
     public void run() {
         while (!disconnect) {
             readImage();
             Message cameramsg = new Message();
             cameramsg.setImage(image);
-            /*
+
             try {
                 connection.write(cameramsg);
             } catch (IOException e) {
                 e.printStackTrace();
             }
-            */
+            try {
+                Thread.sleep(1000);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+
             //gui.setImage(image);
         }
 
-        camera.release();
     }
 }

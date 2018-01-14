@@ -41,7 +41,7 @@ struct klient
     int writesocket;
     char flag;
     char length_bit[BUFSIZE];
-    int length;
+    unsigned int length;
     char* message;
     
 };
@@ -50,17 +50,17 @@ vector <klient> klienci;
 
 vector <string> loginy;
 
-int lenOfMessage(char* bytes){
-    int len = 0;
+unsigned int lenOfMessage(char* bytes){
+    unsigned int len = 0;
     int base = 1;
     for(int i = 3; i>=0; i--){
-            len+= base*(int(bytes[i]));
+            len+= base*(unsigned int)(bytes[i]);
             base *= 256;
     }
     return len;
 }
 
-void lenToMessage(int len, char* message){
+void lenToMessage(unsigned int len, char* message){
     int i = 3;
     while(i >= 0){
         message[i] = len % 256;
@@ -199,7 +199,7 @@ void find_somebody_and_call(struct klient* k1){
         if(recv(k1->readsocket, &flag,1,MSG_DONTWAIT)>0){
             k1->connected = true;
             read_mes(k1, flag);
-            char login_adresata[k1->length+1];
+            char login_adresata[k1->length];
             strcpy(login_adresata, k1->message);
             delete(k1->message);
             cout << "odczytany login adresata: " << login_adresata << endl;

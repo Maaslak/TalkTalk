@@ -12,10 +12,12 @@ public class Connection {
     private byte[] outputBuffer;
     private String username;
     private boolean isEstablished = false;
+    private Message msg;
 
     public Connection(String ip, String username, int port) throws IOException {
         clientSocket = new Socket(ip, port);
         inputBuffer = new byte[4];
+        msg = new Message();
         Message usernameMessage = new Message();
         usernameMessage.setString(username);
         write(usernameMessage);
@@ -25,23 +27,21 @@ public class Connection {
         if (response.equals("ok"))
             isEstablished = true;
         else throw new IOException("Serwer busy");
-
     }
 
     public Message readMassage() throws IOException {
-        Message msg = new Message();
         InputStream inputStream = clientSocket.getInputStream();
         inputBuffer = new byte[1];
         inputStream.read(inputBuffer, 0, 1);
         char type = (char) inputBuffer[0];
-        msg.setType(type);
+        this.msg.setType(type);
         inputBuffer = new byte[4];
         inputStream.read(inputBuffer, 0, 4);
         int size = ByteBuffer.wrap(inputBuffer).asIntBuffer().get();
         inputBuffer = new byte[size];
         inputStream.read(inputBuffer, 0, size);
-        msg.updateMessage(inputBuffer);
-        return msg;
+        this.msg.updateMessage(inputBuffer);
+        return this.msg;
     }
 
     public boolean isEstablished() {
@@ -53,6 +53,7 @@ public class Connection {
     }
 
     private void read() {
+        /*
         new Thread() {
             @Override
             public void run() {
@@ -66,7 +67,7 @@ public class Connection {
                 }
             }
         }.start();
-
+        */
     }
 
     public void write(Message msg) throws IOException {
