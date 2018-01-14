@@ -104,13 +104,13 @@ public class CameraCapture implements Runnable{
             readImage();
             Message cameramsg = new Message();
             cameramsg.setImage(image);
-            /*
+
             try {
                 connection.write(cameramsg);
             } catch (IOException e) {
                 e.printStackTrace();
             }
-            */
+
             try {
                 Thread.sleep(100);
             } catch (InterruptedException e) {

@@ -54,8 +54,9 @@ public class Connect {
                         port = Integer.parseInt(portText.getText());
                         username = usernameText.getText();
                     } else {
-                        ip = "25.49.78.74";
-                        port = 1336;
+                        ip = "25.49.235.96";
+                        //ip = "25.49.78.74";
+                        port = 1301;
                     }
                     username = usernameText.getText();
                     Connection connection = new Connection(ip, username, port);

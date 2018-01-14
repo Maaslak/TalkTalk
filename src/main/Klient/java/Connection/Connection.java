@@ -1,7 +1,5 @@
 package Connection;
 
-import sun.awt.Mutex;
-
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -14,16 +12,10 @@ public class Connection {
     private byte[] outputBuffer;
     private String username;
     private boolean isEstablished = false;
-    private Message msg;
-    private Mutex mux;
-    private boolean connected;
 
     public Connection(String ip, String username, int port) throws IOException {
-        connected = false;
-        mux = new Mutex();
         clientSocket = new Socket(ip, port);
         inputBuffer = new byte[4];
-        msg = new Message();
         Message usernameMessage = new Message();
         usernameMessage.setString(username);
         write(usernameMessage);
@@ -33,21 +25,40 @@ public class Connection {
         if (response.equals("ok"))
             isEstablished = true;
         else throw new IOException("Serwer busy");
+
     }
 
     public Message readMassage() throws IOException {
+        Message msg = new Message();
         InputStream inputStream = clientSocket.getInputStream();
         inputBuffer = new byte[1];
         inputStream.read(inputBuffer, 0, 1);
         char type = (char) inputBuffer[0];
-        this.msg.setType(type);
+        msg.setType(type);
         inputBuffer = new byte[4];
         inputStream.read(inputBuffer, 0, 4);
-        int size = bytesToLen(inputBuffer);//ByteBuffer.wrap(inputBuffer).asIntBuffer().get();
+        int size = ByteBuffer.wrap(inputBuffer).asIntBuffer().get();
         inputBuffer = new byte[size];
         inputStream.read(inputBuffer, 0, size);
-        this.msg.updateMessage(inputBuffer);
-        return this.msg;
+        msg.updateMessage(inputBuffer);
+        return msg;
+    }
+
+    public Message readIncommingConnetionMassage() throws Exception {
+        Message msg = new Message();
+        InputStream inputStream = clientSocket.getInputStream();
+        inputBuffer = new byte[1];
+        int res = inputStream.read(inputBuffer, 0, inputStream.available());
+        if (res == -1) throw new Exception("not yet");
+        char type = (char) inputBuffer[0];
+        msg.setType(type);
+        inputBuffer = new byte[4];
+        inputStream.read(inputBuffer, 0, 4);
+        int size = ByteBuffer.wrap(inputBuffer).asIntBuffer().get();
+        inputBuffer = new byte[size];
+        inputStream.read(inputBuffer, 0, size);
+        msg.updateMessage(inputBuffer);
+        return msg;
     }
 
     public boolean isEstablished() {
@@ -59,58 +70,28 @@ public class Connection {
     }
 
     private void read() {
-
         new Thread() {
             @Override
             public void run() {
-                /*
                 try {
-                    while (!connected) {
-
+                    while (!clientSocket.isClosed()) {
                         readMassage();
-                        if(msg.getType() == 's'){
-
-                        }
-
                     }
                 } catch (IOException e) {
                     e.printStackTrace();
                     System.out.println("Read message exception");
                 }
-                */
-
             }
         }.start();
 
     }
 
-    private byte[] lenToBytes(int value) {
-        byte[] result = new byte[4];
-        int i = 3;
-        while (i >= 0) {
-            result[i] = (byte) (value % 256);
-            i--;
-            value /= 256;
-        }
-        return result;
-    }
-
-    private int bytesToLen(byte[] bytes) {
-        int result = 0;
-        int base = 1;
-        for (int i = 3; i >= 0; i--) {
-            result += base * (int) (bytes[i]);
-            base *= 256;
-        }
-        return result;
-    }
-
     public void write(Message msg) throws IOException {
         OutputStream outputStream = clientSocket.getOutputStream();
         byte[] byteType = msg.getByteType();
-        outputStream.write(byteType, 0, 1);
         byte[] bytes = msg.toBytes();
-        byte[] byteBuffer = lenToBytes(bytes.length);
+        byte[] byteBuffer = ByteBuffer.allocate(4).putInt(bytes.length).array();
+        outputStream.write(byteType, 0, 1);
         outputStream.write(byteBuffer, 0, 4);
         outputStream.write(bytes, 0, bytes.length);
     }

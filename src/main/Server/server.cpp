@@ -18,12 +18,12 @@
 #include <pthread.h>
 
 
-#define SERVER_PORT 1336
+#define SERVER_PORT 1337
 #define QUEUE_SIZE 5
 #define BUFSIZE 4
 
 
-pthread_mutex_t mutexio = PTHREAD_MUTEX_INITIALIZER;
+//pthread_mutex_t mutexio = PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t mutexsr = PTHREAD_MUTEX_INITIALIZER;
 
 using namespace std;
@@ -52,9 +52,12 @@ vector <string> loginy;
 
 unsigned int lenOfMessage(char* bytes){
     unsigned int len = 0;
-    unsigned int base = 1;
+    int base = 1;
     for(int i = 3; i>=0; i--){
             len+= base*(unsigned int)(bytes[i]);
+            if((int)(bytes[i])<0){
+                len+=base * 256;
+            }
             base *= 256;
     }
     return len;
@@ -91,8 +94,32 @@ void read_mes(struct klient* k1){
     read(k1->readsocket,&(k1->flag),1);
     read(k1->readsocket,k1->length_bit,BUFSIZE);
     k1->length = lenOfMessage(k1->length_bit);
+    //printf("%u\n",k1->length);
     k1->message = new char[k1->length];
-    read(k1->readsocket,k1->message,k1->length);
+    unsigned int temp_len = k1->length;
+    unsigned int counter = 0;
+    do{
+        if(temp_len>100){
+            if(read(k1->readsocket,k1->message+counter,100)<0){
+                printf("nie odczytal\n");
+                exit(1);
+            }
+            counter=counter+100;
+            temp_len = temp_len-100;
+            //printf("pobral 100\n");
+        }
+        else{
+            if(read(k1->readsocket,k1->message+counter,temp_len)<0){
+                printf("nie odczytal\n");
+                exit(1);
+            }
+            counter+=temp_len;
+            temp_len=0;
+            //printf("pobral koniec\n");
+        }
+    }while(temp_len!=0);
+    printf("%d\n\n",counter);
+    
 }
 
 void read_mes(struct klient* k1, char flag){
@@ -103,55 +130,79 @@ void read_mes(struct klient* k1, char flag){
     read(k1->readsocket,k1->message,k1->length);
 }
 
-void *write_messages(void *k1){
-    pthread_detach(pthread_self());
-    struct klient *thread_k1 = (struct klient*)k1;
+void talk_one_thread_new(struct klient* k1){
+    printf("Rozmowa\n");
+    k1->talk = true;
+    while(k1->talk == true){
+        printf("talk\n");
+        read(k1->readsocket,&(k1->flag),1);
+        read(k1->readsocket,k1->length_bit,BUFSIZE);
         
-    while(thread_k1->talk == true){
-        //pthread_mutex_lock(&mutexsr);
-        //write(thread_k1->writesocket, thread_k1->buffer, BUFSIZE);
-        read_mes(thread_k1);
-        if(thread_k1->flag == 's')
-             if(thread_k1->message == "exit")
-                thread_k1->talk = false;
-        write_mes(thread_k1);
-        delete(thread_k1->message);
-        //pthread_mutex_unlock(&mutexsr);
-        //sleep(10);
+        write(k1->writesocket,&(k1->flag),1);
+        write(k1->writesocket,k1->length_bit,BUFSIZE);
+        
+        k1->length = lenOfMessage(k1->length_bit);
+        //printf("%u\n",k1->length);
+        //k1->message = new char[100];
+        
+        //sleep(5);
+        
+            char message;
+            printf("%d\n",k1->length);
+            /*while(read(k1->readsocket,&message,1)){
+                write(k1->writesocket,&message,1);
+            }*/
+        
+            for(int i=0; i<k1->length; i++){
+                read(k1->readsocket,&message,1);
+                write(k1->writesocket,&message,1);
+            }
+           
+        
+        
+        
+        
+        /*int counter = k1->length;
+        do{
+            if(counter>100){
+                k1->message = new char[100];
+                if(read(k1->readsocket,k1->message,100)<=0)
+                    printf("error");
+                if(write(k1->writesocket,k1->message,100)<=0)
+                    printf("error");
+                counter = counter - 100;
+                delete(k1->message);
+            }
+            else if(counter>0){
+                //delete(k1->message);
+                k1->message = new char[counter];
+                printf("%d\n",counter);
+                if(read(k1->readsocket,k1->message,counter)<=0)
+                    printf("error");
+                if(write(k1->writesocket,k1->message,counter)<=0)
+                    printf("error");
+                counter=0;
+                delete(k1->message);
+                break;
+            }       
+        }while(counter>0);
+        //delete(k1->message);*/
     }
-    
-    free(thread_k1);
-    pthread_exit(NULL);
-        
+    //k1->talk = false;
 }
 
-void read_messages(struct klient* k1){
-    while(k1->talk == true){
-    /*
-        pthread_mutex_lock(&mutexsr);
+void talk_one_thread(struct klient* k1){
+    printf("Rozmowa\n");
+    k1->talk = true;
+    while(k1->talk = true){
         read_mes(k1);
         if(k1->flag == 's')
-            if(k1->message == "exit")
+             if(k1->message == "exit")
                 k1->talk = false;
+        write_mes(k1);
         delete(k1->message);
-        pthread_mutex_unlock(&mutexsr);
-        sleep(10);
-        */
     }
-}
-
-void talk(struct klient* k1){
-    k1->talk = true;
-
-    pthread_t thread1;
-    
-    int create_result = pthread_create(&thread1, NULL, write_messages, (void *)k1);
-    if (create_result){
-       printf("Błąd przy próbie utworzenia wątku, kod błędu: %d\n", create_result);
-       exit(-1);
-    }
-
-    read_messages(k1);
+    k1->talk = false;
 }
 
 void log_in(struct klient* k1){
@@ -183,15 +234,15 @@ void log_in(struct klient* k1){
             write_mes(k1,temp,12);
             cout << "Niepoprawny login: " << k1->message << endl;
         }
+        delete(k1->message);
     }while(k1->available == false);
-    delete(k1->message);
 }
 
 void find_somebody_and_call(struct klient* k1){
     while(k1->available == true){
         if(k1->writesocket != 0){
             k1->connected = true;
-            talk(k1);
+            talk_one_thread_new(k1);
             k1->connected = false;
         }
         //czytanie loginu osoby z ktora chcemy rozmawiac
@@ -223,9 +274,30 @@ void find_somebody_and_call(struct klient* k1){
                 cout << "Polaczono " << k1->login << " i " << friend1.login << endl;
                 char temp[] = "Polaczono!";
                 write_mes(k1,temp,10);
+                //char temp1[] = k1->login;
+                //int len = k1->login;
                 //write_mes(friend1,temp,10);
-                talk(k1);
+                talk_one_thread_new(k1);
                 k1->connected = false;
+                
+                fstream plik;
+                plik.open( k1->login + ".txt", ios::in );
+                if( plik.good() == true ){
+                    string login;
+                    while(!plik.eof()){
+                        plik >> login;
+                        cout << login << endl; //wyświetlenie linii
+                        loginy.push_back(login);
+                    }
+                    //tu operacje na pliku (zapis/odczyt)
+                    plik.close();
+                    
+                    
+                }
+                else{
+                    cout << "Nie udalo sie otworzyc pliku" << endl;
+                    exit(1);
+                }
             }
             else{
                 cout << "Nie udalo sie polaczyc" << endl;
@@ -333,3 +405,53 @@ int main(int argc, char* argv[])
    return(0);
 }
 
+/*void *write_messages(void *k1){
+    pthread_detach(pthread_self());
+    struct klient *thread_k1 = (struct klient*)k1;
+        
+    while(thread_k1->talk == true){
+        //pthread_mutex_lock(&mutexsr);
+        //write(thread_k1->writesocket, thread_k1->buffer, BUFSIZE);
+        read_mes(thread_k1);
+        if(thread_k1->flag == 's')
+             if(thread_k1->message == "exit")
+                thread_k1->talk = false;
+        write_mes(thread_k1);
+        delete(thread_k1->message);
+        //pthread_mutex_unlock(&mutexsr);
+        //sleep(10);
+    }
+    
+    free(thread_k1);
+    pthread_exit(NULL);
+        
+}
+
+void read_messages(struct klient* k1){
+    while(k1->talk == true){
+    
+        pthread_mutex_lock(&mutexsr);
+        read_mes(k1);
+        if(k1->flag == 's')
+            if(k1->message == "exit")
+                k1->talk = false;
+        delete(k1->message);
+        pthread_mutex_unlock(&mutexsr);
+        sleep(10);
+        
+    }
+}
+
+void talk(struct klient* k1){
+    k1->talk = true;
+
+    pthread_t thread1;
+    
+    int create_result = pthread_create(&thread1, NULL, write_messages, (void *)k1);
+    if (create_result){
+       printf("Błąd przy próbie utworzenia wątku, kod błędu: %d\n", create_result);
+       exit(-1);
+    }
+
+    read_messages(k1);
+}*/

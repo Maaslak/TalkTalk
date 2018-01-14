@@ -42,7 +42,7 @@ public class Microphone implements Runnable {
     }
 
     public void start() {
-        //microphone.start();
+        microphone.start();
         AudioInputStream audio_input_stream = new AudioInputStream(microphone);
         while (!closed) {
             numBytesMutex.lock();
@@ -62,7 +62,6 @@ public class Microphone implements Runnable {
             } catch (IOException e) {
                 e.printStackTrace();
             }
-            //speaker.play(data, numBytesRead);
         }
         microphone.close();
     }

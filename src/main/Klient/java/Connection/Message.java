@@ -92,9 +92,9 @@ public class Message {
     }
 
     public byte[] toBytes() {
-        if (image != null)
+        if (type == 'i')
             return imageToBytes();
-        if (voice != null)
+        if (type == 'v')
             return voice;
         return string.getBytes();
     }
