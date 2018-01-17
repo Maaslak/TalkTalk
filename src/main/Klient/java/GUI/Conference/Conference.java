@@ -8,10 +8,9 @@ import sun.awt.Mutex;
 
 import javax.sound.sampled.AudioFormat;
 import javax.swing.*;
-import java.awt.event.MouseAdapter;
-import java.awt.event.MouseEvent;
-import java.awt.event.WindowAdapter;
-import java.awt.event.WindowEvent;
+import javax.swing.border.Border;
+import javax.swing.border.TitledBorder;
+import java.awt.event.*;
 import java.awt.image.BufferedImage;
 import java.io.IOException;
 
@@ -26,8 +25,13 @@ public class Conference implements Runnable {
     static private Speakers speaker;
     static private AudioFormat format;
     private Connection connection;
+    boolean connected;
 
-    public Conference(final JFrame father, final CameraCapture camera, final Connection connection) {
+    public Conference(final JFrame father, final CameraCapture camera, final Connection connection, String friendsUsername) {
+        connected = true;
+        TitledBorder border = (TitledBorder) this.conferencePanel.getBorder();
+        border.setTitle(friendsUsername);
+        this.conferencePanel.setBorder(border);
         this.father = father;
         this.connection = connection;
         frame = new JFrame("ConferencePanel");
@@ -37,7 +41,6 @@ public class Conference implements Runnable {
         frame.addWindowListener(new WindowAdapter() {
             @Override
             public void windowClosing(WindowEvent e) {
-                //camera.releaseCamera();
                 mic.close();
                 speaker.close();
                 father.setVisible(true);
@@ -60,20 +63,27 @@ public class Conference implements Runnable {
             @Override
             public void mouseClicked(MouseEvent e) {
                 super.mouseClicked(e);
-                Message msg = new Message();
-                msg.setString("exit");
-                camera.setDisconnect(true);
-                try {
-                    connection.write(msg);
-                } catch (IOException e1) {
-                    e1.printStackTrace();
-                }
-                mic.close();
-                father.setVisible(true);
-                //TODO Accept the disconecting
-                frame.dispose();
+                disconnect();
             }
         });
+        generalPanel.addComponentListener(new ComponentAdapter() {
+        });
+    }
+
+    private void disconnect() {
+        connected = false;
+        Message msg = new Message();
+        msg.setString("exit");
+        msg.setType('e');
+        camera.setDisconnect(true);
+        try {
+            connection.write(msg);
+        } catch (IOException e1) {
+            e1.printStackTrace();
+        }
+        mic.close();
+        father.setVisible(true);
+        frame.dispose();
     }
 
     public void setImage(BufferedImage image){
@@ -87,7 +97,7 @@ public class Conference implements Runnable {
 
     public void run() {
         try {
-            while (true) {
+            while (connected) {
                 Message message = connection.readMassage();
                 if (message.getType() == 'i')
                     setImage(message.getImage());
@@ -95,6 +105,9 @@ public class Conference implements Runnable {
                     speaker.play(message.getVoice(), message.getVoice().length);
                 if (message.getType() == 's')
                     System.out.println(message.getString());
+                if (message.getType() == 'e')
+                    disconnect();
+
             }
         } catch (IOException e) {
             e.printStackTrace();

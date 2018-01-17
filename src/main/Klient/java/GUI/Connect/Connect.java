@@ -56,7 +56,7 @@ public class Connect {
                     } else {
                         ip = "25.49.235.96";
                         //ip = "25.49.78.74";
-                        port = 1301;
+                        port = 1302;
                     }
                     username = usernameText.getText();
                     Connection connection = new Connection(ip, username, port);

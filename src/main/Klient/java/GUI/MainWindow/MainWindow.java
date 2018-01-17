@@ -8,6 +8,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import sun.awt.Mutex;
 
 import javax.swing.*;
+import javax.swing.plaf.TableHeaderUI;
 import javax.swing.tree.DefaultMutableTreeNode;
 import javax.swing.tree.DefaultTreeModel;
 import javax.swing.tree.MutableTreeNode;
@@ -55,6 +56,8 @@ public class MainWindow implements Runnable {
         root.removeAllChildren();
         model.reload();
         deserialize(); // getting contact list from server
+        Thread thisThread = new Thread(this);
+        thisThread.start();
 
         connectButton.addMouseListener(new MouseAdapter() {
             @Override
@@ -73,10 +76,11 @@ public class MainWindow implements Runnable {
                     targetuser += '\0';
                     targetname.setString(targetuser);
                     connection.write(targetname);
+                    Thread.sleep(1000);
                     Message msg = connection.readMassage();
                     msg.updateMessage(connection.getInputBuffer());
                     if (msg.getString().equals("Polaczono!")) {
-                        initConference();
+                        initConference(targetuser);
                     } else {
                         throw new IOException("Err");
                     }
@@ -208,8 +212,8 @@ public class MainWindow implements Runnable {
 
     }
 
-    public void initConference() {
-        conference = new Conference(frame, camera, connection);
+    public void initConference(String targetUsername) {
+        conference = new Conference(frame, camera, connection, targetUsername);
         Thread thread = new Thread(conference);
         thread.start();
         camera.setGui(conference);
@@ -217,41 +221,11 @@ public class MainWindow implements Runnable {
         inConference = true;
     }
 
-    private void serialize() {
+    public void serialize() {
         model = (DefaultTreeModel) contacts.getModel();
         ObjectMapper mapper = new ObjectMapper();
         DefaultMutableTreeNode root = (DefaultMutableTreeNode) model.getRoot();
-        /*
-        try {
-            FileOutputStream fileOut =
-                    new FileOutputStream("/contacts.ser");
 
-
-            //mapper.writeValue(System.out, model);
-            ObjectOutputStream out = new ObjectOutputStream(fileOut);
-            out.writeObject(model);
-            out.close();
-            fileOut.close();
-
-        } catch (FileNotFoundException e) {
-            e.printStackTrace();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-        */
-        /*
-        Map<String, DefaultMutableTreeNode> modelMap = new HashMap<String, DefaultMutableTreeNode>();
-
-        for (DefaultMutableTreeNode child = (DefaultMutableTreeNode)root.getFirstChild(); !child.equals(root.getLastChild()); child = root.getNextNode()){
-            modelMap.put("contact", child);
-        }
-
-        try {
-            mapper.writeValue(System.out, modelMap);
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-        */
         int count = root.getChildCount();
         String result = new String("");
         if (count > 0) {
@@ -262,32 +236,21 @@ public class MainWindow implements Runnable {
         } else {
             result = "---";
         }
-        System.out.println(result);
         this.contactsMsg.setString(result);
         this.contactsMsg.setType('c');
+        try {
+            connection.write(contactsMsg);
+        } catch (IOException e) {
+            e.printStackTrace();
+            output.setText("Nie udalo sie zaaktualizowac kontaktow na serwerze");
+        }
     }
 
     private void deserialize() {
-
-        /*
-        try {
-            FileInputStream fileIn = new FileInputStream("/contacts.ser");
-            ObjectInputStream in = new ObjectInputStream(fileIn);
-            model = (DefaultTreeModel) in.readObject();
-            in.close();
-            fileIn.close();
-        } catch (IOException i) {
-            i.printStackTrace();
-        } catch (ClassNotFoundException c) {
-            System.out.println("Employee class not found");
-            c.printStackTrace();
-        }
-        */
         try {
             contactsMsg = connection.readMassage();
             if (contactsMsg.getType() != 's') throw new IOException();
             String contactsString = this.contactsMsg.getString();
-            //String contactsString = new String("maaslak\nMaaslak");
             BufferedReader bufReader = new BufferedReader(new StringReader(contactsString));
             String line;
             DefaultMutableTreeNode root = (DefaultMutableTreeNode) model.getRoot();
@@ -314,13 +277,13 @@ public class MainWindow implements Runnable {
                 try {
                     Thread.sleep(2000);
                     output.setText("");
+                    frame.repaint();
                 } catch (InterruptedException e) {
                     e.printStackTrace();
                 }
 
             }
         }.start();
-        frame.repaint();
     }
 
     private byte[] contactsToBytes() {
@@ -329,13 +292,19 @@ public class MainWindow implements Runnable {
     }
 
     /*
-     If someone trying to connect
+     If someone trying to contact
      */
     public void run() {
         while (!inConference)
             try {
-                Message incommingConnection = connection.readMassage();
-
+                Message incommingMessage = connection.readMassage();
+                if (incommingMessage.getType() == 't') {
+                    Message msg = new Message();
+                    msg.setString("ok");
+                    msg.setType('k');
+                    connection.write(msg);
+                    //initConference(incommingMessage.getString());
+                }
             } catch (IOException e) {
                 e.printStackTrace();
                 System.out.println(e.getMessage());

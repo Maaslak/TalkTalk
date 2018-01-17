@@ -11,7 +11,7 @@ public class Connection {
     private byte[] inputBuffer;
     private byte[] outputBuffer;
     private String username;
-    private boolean isEstablished = false;
+
 
     public Connection(String ip, String username, int port) throws IOException {
         clientSocket = new Socket(ip, port);
@@ -22,9 +22,8 @@ public class Connection {
         Message msg = readMassage();
         msg.updateMessage(inputBuffer);
         String response = msg.getString();
-        if (response.equals("ok"))
-            isEstablished = true;
-        else throw new IOException("Serwer busy");
+        if (!response.equals("ok"))
+            throw new IOException("Serwer busy");
 
     }
 
@@ -61,30 +60,10 @@ public class Connection {
         return msg;
     }
 
-    public boolean isEstablished() {
-        return isEstablished;
-    }
-
     public byte[] getInputBuffer() {
         return inputBuffer;
     }
 
-    private void read() {
-        new Thread() {
-            @Override
-            public void run() {
-                try {
-                    while (!clientSocket.isClosed()) {
-                        readMassage();
-                    }
-                } catch (IOException e) {
-                    e.printStackTrace();
-                    System.out.println("Read message exception");
-                }
-            }
-        }.start();
-
-    }
 
     public void write(Message msg) throws IOException {
         OutputStream outputStream = clientSocket.getOutputStream();

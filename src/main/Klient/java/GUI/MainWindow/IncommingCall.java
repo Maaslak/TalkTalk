@@ -59,7 +59,7 @@ public class IncommingCall extends JDialog {
         message.setString("accept");
         try {
             connection.write(message);
-            father.initConference();
+            father.initConference(username.getText());
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -71,7 +71,7 @@ public class IncommingCall extends JDialog {
         message.setString("decline");
         try {
             connection.write(message);
-            father.initConference();
+            father.initConference(username.getText());
         } catch (IOException e) {
             e.printStackTrace();
         }
