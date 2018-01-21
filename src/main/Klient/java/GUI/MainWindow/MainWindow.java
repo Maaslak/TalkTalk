@@ -37,6 +37,7 @@ public class MainWindow implements Runnable {
     private DefaultTreeModel model;
     private boolean inConference = false;
     private Message contactsMsg;
+    private Mutex writemux = new Mutex();
 
 
     static private Conference conference;
@@ -49,15 +50,15 @@ public class MainWindow implements Runnable {
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         frame.pack();
         frame.setVisible(true);
-        camera = new CameraCapture(connection);
+        camera = new CameraCapture(connection, writemux);
         model = (DefaultTreeModel) contacts.getModel();
         DefaultMutableTreeNode root = (DefaultMutableTreeNode) model.getRoot();
         root.setUserObject("Contacts");
         root.removeAllChildren();
-        model.reload();
         deserialize(); // getting contact list from server
-        Thread thisThread = new Thread(this);
-        thisThread.start();
+        model.reload();
+        //Thread thisThread = new Thread(this);
+        //thisThread.start();
 
         connectButton.addMouseListener(new MouseAdapter() {
             @Override
@@ -86,8 +87,10 @@ public class MainWindow implements Runnable {
                     }
                 } catch (IOException e1) {
                     e1.printStackTrace();
-                    output.setText("Cannot establish connection");
+                    output.setText(e1.getMessage());
                     refreshOutput();
+                    if(e1.getMessage().equals("Disconnected"))
+                        System.exit(-1);
                 } catch (Exception e1) {
                     e1.printStackTrace();
                     output.setText(e1.getMessage());
@@ -213,7 +216,7 @@ public class MainWindow implements Runnable {
     }
 
     public void initConference(String targetUsername) {
-        conference = new Conference(frame, camera, connection, targetUsername);
+        conference = new Conference(frame, camera, connection, targetUsername, writemux);
         Thread thread = new Thread(conference);
         thread.start();
         camera.setGui(conference);
@@ -243,6 +246,8 @@ public class MainWindow implements Runnable {
         } catch (IOException e) {
             e.printStackTrace();
             output.setText("Nie udalo sie zaaktualizowac kontaktow na serwerze");
+            if(e.getMessage().equals("Disconnected"))
+                System.exit(-1);
         }
     }
 
@@ -308,6 +313,8 @@ public class MainWindow implements Runnable {
             } catch (IOException e) {
                 e.printStackTrace();
                 System.out.println(e.getMessage());
+                if(e.getMessage().equals("Disconnected"))
+                    System.exit(-1);
             }
     }
 

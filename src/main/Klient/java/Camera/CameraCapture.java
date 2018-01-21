@@ -5,6 +5,7 @@ import Connection.Message;
 import GUI.Conference.Conference;
 import org.opencv.core.Mat;
 import org.opencv.highgui.*;
+import sun.awt.Mutex;
 
 import java.awt.image.BufferedImage;
 import java.awt.image.DataBufferByte;
@@ -29,8 +30,11 @@ public class CameraCapture implements Runnable{
 
     private Connection connection;
 
+    private Mutex mux;
 
-    public CameraCapture(Connection connection) {
+
+    public CameraCapture(Connection connection, Mutex writemux) {
+        this.mux = writemux;
         this.connection = connection;
         initCamera();
     }
@@ -106,9 +110,13 @@ public class CameraCapture implements Runnable{
             cameramsg.setImage(image);
 
             try {
+                mux.lock();
                 connection.write(cameramsg);
+                mux.unlock();
             } catch (IOException e) {
                 e.printStackTrace();
+                if(e.getMessage().equals("Disconnected"))
+                    System.exit(-1);
             }
 
             try {

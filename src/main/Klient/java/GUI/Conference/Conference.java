@@ -26,9 +26,11 @@ public class Conference implements Runnable {
     static private AudioFormat format;
     private Connection connection;
     boolean connected;
+    private Mutex mux;
 
-    public Conference(final JFrame father, final CameraCapture camera, final Connection connection, String friendsUsername) {
+    public Conference(final JFrame father, final CameraCapture camera, final Connection connection, String friendsUsername, Mutex writemux) {
         connected = true;
+        mux = writemux;
         TitledBorder border = (TitledBorder) this.conferencePanel.getBorder();
         border.setTitle(friendsUsername);
         this.conferencePanel.setBorder(border);
@@ -51,7 +53,7 @@ public class Conference implements Runnable {
         this.camera = camera;
         format = new AudioFormat(8000, 8, 1, true, false);
         speaker = new Speakers(format);
-        mic = new Microphone(speaker, format, connection);
+        mic = new Microphone(speaker, format, connection, mux);
 
         Thread camera_thread = new Thread(camera);
         camera_thread.start();
@@ -80,6 +82,8 @@ public class Conference implements Runnable {
             connection.write(msg);
         } catch (IOException e1) {
             e1.printStackTrace();
+            if(e1.getMessage().equals("Disconnected"))
+                System.exit(-1);
         }
         mic.close();
         father.setVisible(true);

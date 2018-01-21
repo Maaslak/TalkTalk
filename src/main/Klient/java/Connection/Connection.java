@@ -31,14 +31,32 @@ public class Connection {
         Message msg = new Message();
         InputStream inputStream = clientSocket.getInputStream();
         inputBuffer = new byte[1];
-        inputStream.read(inputBuffer, 0, 1);
+        int count = 1;
+        int offset = 0;
+        while(count > 0) {
+            final int readCount = inputStream.read(inputBuffer, 0, 1);
+            offset += readCount;
+            count -=readCount;
+        }
         char type = (char) inputBuffer[0];
         msg.setType(type);
         inputBuffer = new byte[4];
-        inputStream.read(inputBuffer, 0, 4);
+        count = 4;
+        offset = 0;
+        while(count > 0) {
+            final int readCount = inputStream.read(inputBuffer, 0, 4);
+            offset += readCount;
+            count -= readCount;
+        }
         int size = ByteBuffer.wrap(inputBuffer).asIntBuffer().get();
         inputBuffer = new byte[size];
-        inputStream.read(inputBuffer, 0, size);
+        count = size;
+        offset = 0;
+        while(count > 0) {
+            final int readCount = inputStream.read(inputBuffer, 0, size);
+            offset += readCount;
+            count -= readCount;
+        }
         msg.updateMessage(inputBuffer);
         return msg;
     }
@@ -67,6 +85,7 @@ public class Connection {
 
     public void write(Message msg) throws IOException {
         OutputStream outputStream = clientSocket.getOutputStream();
+        if(!clientSocket.isConnected()) throw new IOException("Disconnected");
         byte[] byteType = msg.getByteType();
         byte[] bytes = msg.toBytes();
         byte[] byteBuffer = ByteBuffer.allocate(4).putInt(bytes.length).array();

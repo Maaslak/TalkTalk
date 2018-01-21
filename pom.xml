@@ -6,6 +6,7 @@
     <groupId>Camera</groupId>
     <artifactId>TalkTalk</artifactId>
     <version>0.1</version>
+    <packaging>jar</packaging>
 
 
     <dependencies>
@@ -22,7 +23,64 @@
     </dependencies>
 
     <build>
-        <defaultGoal>install</defaultGoal>
+        <defaultGoal>site</defaultGoal>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-assembly-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>single</goal>
+                        </goals>
+                        <configuration>
+                            <archive>
+                                <manifest>
+                                    <mainClass>
+                                        Main
+                                    </mainClass>
+                                </manifest>
+                            </archive>
+                            <descriptorRefs>
+                                <descriptorRef>jar-with-dependencies</descriptorRef>
+                            </descriptorRefs>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-javadoc-plugin</artifactId>
+                <version>3.0.0</version>
+                <configuration>
+                    <doctitle>My API for ${project.name} ${project.version}</doctitle> <!-- Used by javadoc:javadoc goal -->
+                    <windowtitle>My API for ${project.name} ${project.version}</windowtitle> <!-- Used by javadoc:javadoc goal -->
+                </configuration>
+            </plugin>
+         </plugins>
     </build>
-    
+
+    <reporting>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-javadoc-plugin</artifactId>
+                <version>3.0.0</version>
+                <reportSets>
+                <reportSet>
+                    <id>html</id>
+                    <configuration>
+                        <doctitle>My API for ${project.name} ${project.version}</doctitle>
+                        <windowtitle>My API for ${project.name} ${project.version}</windowtitle>
+                    </configuration>
+                    <reports>
+                        <report>javadoc</report>
+                    </reports>
+                </reportSet>
+                </reportSets>
+            </plugin>
+        </plugins>
+    </reporting>
+
 </project>

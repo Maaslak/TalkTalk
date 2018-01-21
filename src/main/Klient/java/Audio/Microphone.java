@@ -20,9 +20,11 @@ public class Microphone implements Runnable {
     private Speakers speaker;
     private Mutex dataMutex;
     private Mutex numBytesMutex;
+    private Mutex writeMux;
     private Connection connection;
 
-    public Microphone(Speakers speaker, AudioFormat format, Connection connection) {
+    public Microphone(Speakers speaker, AudioFormat format, Connection connection, Mutex mux) {
+        this.writeMux = mux;
         this.connection = connection;
         this.speaker = speaker;
         //out = new ByteArrayOutputStream()
@@ -51,17 +53,23 @@ public class Microphone implements Runnable {
             dataMutex.unlock();
             numBytesMutex.unlock();
             try {
-                Thread.sleep(100);
+                Thread.sleep(10);
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }
             Message audio = new Message();
             audio.setVoice(data);
+
             try {
+                writeMux.lock();
                 connection.write(audio);
+                writeMux.unlock();
             } catch (IOException e) {
                 e.printStackTrace();
+                if(e.getMessage().equals("Disconnected"))
+                    System.exit(-1);
             }
+
         }
         microphone.close();
     }

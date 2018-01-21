@@ -62,6 +62,8 @@ public class IncommingCall extends JDialog {
             father.initConference(username.getText());
         } catch (IOException e) {
             e.printStackTrace();
+            if(e.getMessage().equals("Disconnected"))
+                System.exit(-1);
         }
         dispose();
     }
@@ -74,6 +76,8 @@ public class IncommingCall extends JDialog {
             father.initConference(username.getText());
         } catch (IOException e) {
             e.printStackTrace();
+            if(e.getMessage().equals("Disconnected"))
+                System.exit(-1);
         }
         dispose();
     }
