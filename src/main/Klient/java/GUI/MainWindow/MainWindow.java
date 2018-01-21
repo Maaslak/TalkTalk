@@ -57,8 +57,8 @@ public class MainWindow implements Runnable {
         root.removeAllChildren();
         deserialize(); // getting contact list from server
         model.reload();
-        //Thread thisThread = new Thread(this);
-        //thisThread.start();
+        Thread thisThread = new Thread(this);
+        thisThread.start();
 
         connectButton.addMouseListener(new MouseAdapter() {
             @Override
@@ -216,12 +216,12 @@ public class MainWindow implements Runnable {
     }
 
     public void initConference(String targetUsername) {
+        inConference = true;
         conference = new Conference(frame, camera, connection, targetUsername, writemux);
         Thread thread = new Thread(conference);
         thread.start();
         camera.setGui(conference);
         frame.setVisible(false);
-        inConference = true;
     }
 
     public void serialize() {
@@ -300,22 +300,24 @@ public class MainWindow implements Runnable {
      If someone trying to contact
      */
     public void run() {
-        while (!inConference)
+        while (!inConference) {
             try {
                 Message incommingMessage = connection.readMassage();
+                initConference(incommingMessage.getString());
                 if (incommingMessage.getType() == 't') {
                     Message msg = new Message();
                     msg.setString("ok");
                     msg.setType('k');
                     connection.write(msg);
-                    //initConference(incommingMessage.getString());
+                    initConference(incommingMessage.getString());
                 }
             } catch (IOException e) {
                 e.printStackTrace();
                 System.out.println(e.getMessage());
-                if(e.getMessage().equals("Disconnected"))
+                if (e.getMessage().equals("Disconnected"))
                     System.exit(-1);
             }
+        }
     }
 
     public Connection getConnection() {

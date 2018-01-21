@@ -110,6 +110,12 @@ public class CameraCapture implements Runnable{
             cameramsg.setImage(image);
 
             try {
+                Thread.sleep(1);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+            /*
+            try {
                 mux.lock();
                 connection.write(cameramsg);
                 mux.unlock();
@@ -118,14 +124,9 @@ public class CameraCapture implements Runnable{
                 if(e.getMessage().equals("Disconnected"))
                     System.exit(-1);
             }
+        */
 
-            try {
-                Thread.sleep(100);
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            }
-
-            //gui.setImage(image);
+          gui.setImage(image);
         }
 
     }
