@@ -3,6 +3,7 @@
 #include <fstream>
 #include <string>
 //#include <conio.h>
+#include <errno.h>
 
 #include <sys/types.h>
 #include <sys/wait.h>
@@ -19,7 +20,7 @@
 #include <pthread.h>
 
 
-#define SERVER_PORT 1306
+#define SERVER_PORT 1314
 #define QUEUE_SIZE 5
 #define BUFSIZE 4
 
@@ -53,7 +54,7 @@ vector <klient> klienci;
 vector <string> loginy;
 
 unsigned int lenOfMessage(char* bytes){
-    unsigned int len = 0;
+    int len = 0;
     int base = 1;
     for(int i = 3; i>=0; i--){
             //len+= base*(unsigned int)(bytes[i]);
@@ -76,133 +77,110 @@ void lenToMessage(unsigned int len, char* message){
     }
 }
 
-void write_mes(struct klient* k1){
-    //if(k1->flag != 's'){
-        write(k1->writesocket,&(k1->flag),1);
-        write(k1->writesocket,k1->length_bit,BUFSIZE);
-        write(k1->writesocket,k1->message,k1->length);
-    //}
-}
-
-void write_mes(struct klient* k1,char* mes, int len){
-    //if(k1->flag == 's'){
-        write(k1->readsocket,&(k1->flag),1);
-        char mess_length[BUFSIZE];
-        lenToMessage(len, mess_length);
-        write(k1->readsocket,mess_length,BUFSIZE);
-        write(k1->readsocket,mes,len);
-    //}
-}
-
-void read_mes(struct klient* k1){
-    read(k1->readsocket,&(k1->flag),1);
-    read(k1->readsocket,k1->length_bit,BUFSIZE);
-    k1->length = lenOfMessage(k1->length_bit);
-    //printf("%u\n",k1->length);
-    k1->message = new char[k1->length];
-    unsigned int temp_len = k1->length;
-    unsigned int counter = 0;
-    do{
-        if(temp_len>100){
-            if(read(k1->readsocket,k1->message+counter,100)<0){
-                printf("nie odczytal\n");
-                exit(1);
-            }
-            counter=counter+100;
-            temp_len = temp_len-100;
-            //printf("pobral 100\n");
-        }
-        else{
-            if(read(k1->readsocket,k1->message+counter,temp_len)<0){
-                printf("nie odczytal\n");
-                exit(1);
-            }
-            counter+=temp_len;
-            temp_len=0;
-            //printf("pobral koniec\n");
-        }
-    }while(temp_len!=0);
-    printf("%d\n\n",counter);
-    
-}
-
-void read_mes(struct klient* k1, char flag){
-    k1->flag = flag;
-    read(k1->readsocket,k1->length_bit,BUFSIZE);
-    k1->length = lenOfMessage(k1->length_bit);
-    k1->message = new char[k1->length];
-    read(k1->readsocket,k1->message,k1->length);
-}
-
-void talk_one_thread_new(struct klient* k1){
-    printf("Rozmowa\n");
-    k1->talk = true;
-    while(k1->talk == true){
-        printf("talk\n");
-        read(k1->readsocket,&(k1->flag),1);
-        printf("odczytano\n");
-        
-        write(k1->writesocket,&(k1->flag),1);
-        read(k1->readsocket,k1->length_bit,BUFSIZE);
-        printf("odczytano2\n");
-        write(k1->writesocket,k1->length_bit,BUFSIZE);
-        k1->length = lenOfMessage(k1->length_bit);
-        //printf("%d\n",k1->length);
-        //printf("%u\n",k1->length);
-        //k1->message = new char[100];
-        
-        char message;
-        printf("%d\n",k1->length);
-        while(read(k1->readsocket,&message,1)){
-                write(k1->writesocket,&message,1);
-            }
-        
-        if(k1->flag == 's')
-             if(k1->message == "exit"){
-                 k1->talk = false;
-                 break;
-             } 
-        
-        
-        
-        
-        /*int counter = k1->length;
-        do{
-            if(counter>100){
-                k1->message = new char[100];
-                if(read(k1->readsocket,k1->message,100)<=0)
-                    printf("error");
-                if(write(k1->writesocket,k1->message,100)<=0)
-                    printf("error");
-                counter = counter - 100;
-                delete(k1->message);
-            }
-            else if(counter>0){
-                //delete(k1->message);
-                k1->message = new char[counter];
-                printf("%d\n",counter);
-                if(read(k1->readsocket,k1->message,counter)<=0)
-                    printf("error");
-                if(write(k1->writesocket,k1->message,counter)<=0)
-                    printf("error");
-                counter=0;
-                delete(k1->message);
-                break;
-            }       
-        }while(counter>0);
-        //delete(k1->message);*/
+ssize_t read_line(int fd, char *buffer, size_t n)
+{
+    ssize_t numRead;
+    size_t totRead;
+    char *buf;
+    char ch;
+    if ( n<= 0 || buffer == NULL ){
+        errno = EINVAL;
+        return -1;
     }
+    
+    buf = buffer;
+    
+    totRead = 0;
+    for(;;){
+        numRead = read(fd, &ch, 1);
+        if(numRead == -1){
+            if( errno == EINTR)
+                continue;
+            else
+                return -1;
+            
+        } else {
+            if (numRead == 1){
+                totRead++;
+                *buf++ = ch;
+            }
+            
+            if(totRead == n)
+                break;
+        }
+    }
+    
+    //*buf = '\0';
+    return totRead;
 }
+
+ssize_t writen(int fd, const char *buffer, size_t n)
+{
+    ssize_t numWritten;
+    /* # of bytes written by last write() */
+    size_t totWritten;
+    /* Total # of bytes written so far */
+    const char *buf;
+    buf = buffer;
+    /* No pointer arithmetic on "void *" */
+    for (totWritten = 0; totWritten < n; ) {
+        numWritten = write(fd, buf, n - totWritten);
+        if (numWritten <= 0) {
+            if (numWritten == -1 && errno == EINTR)
+                continue;
+            /* Interrupted --> restart write() */
+        else
+            return -1;
+            /* Some other error */
+        }
+        totWritten += numWritten;
+        buf += numWritten;
+    }
+return totWritten;
+/* Must be 'n' bytes if we get here */
+}
+
+void write_message(struct klient* k1){
+    writen(k1->writesocket,&(k1->flag),1);
+    writen(k1->writesocket,k1->length_bit,BUFSIZE);
+    writen(k1->writesocket,k1->message,k1->length);
+}
+
+void write_message(struct klient* k1,char* mes, int len){
+    writen(k1->readsocket,&(k1->flag),1);
+    char mess_length[BUFSIZE];
+    lenToMessage(len, mess_length);
+    writen(k1->readsocket,mess_length,BUFSIZE);
+    writen(k1->readsocket,mes,len);
+}
+
+void read_message(struct klient* k1, char flag){
+    k1->flag = flag;
+    read_line(k1->readsocket,k1->length_bit,BUFSIZE);
+    k1->length = lenOfMessage(k1->length_bit);
+    k1->message = new char[k1->length];
+    read_line(k1->readsocket,k1->message,k1->length);
+}
+
+void read_message(struct klient* k1){
+    read_line(k1->readsocket,&(k1->flag),1);
+    read_line(k1->readsocket,k1->length_bit,BUFSIZE);
+    k1->length = lenOfMessage(k1->length_bit);
+    k1->message = new char[k1->length];
+    read_line(k1->readsocket,k1->message,k1->length);
+}
+
+
 
 void talk_one_thread(struct klient* k1){
     printf("Rozmowa\n");
     k1->talk = true;
     while(k1->talk = true){
-        read_mes(k1);
+        read_message(k1);
         if(k1->flag == 's')
              if(k1->message == "exit")
                 k1->talk = false;
-        write_mes(k1);
+        write_message(k1);
         delete(k1->message);
     }
     k1->talk = false;
@@ -210,8 +188,8 @@ void talk_one_thread(struct klient* k1){
 
 void log_in(struct klient* k1){
     do{
-        if(read(k1->readsocket,&(k1->flag),1)){
-            read_mes(k1,k1->flag);
+        read_message(k1);
+        
         bool autoryzacja=false;
         
         bool free_account = true;
@@ -239,7 +217,7 @@ void log_in(struct klient* k1){
         if (autoryzacja){
             k1->available = true;
             char temp[]= "ok";
-            write_mes(k1,temp,2);
+            write_message(k1,temp,2);
             cout << "Uzytkownik " << k1->login << " zalogowany" << endl;
             
             
@@ -252,16 +230,15 @@ void log_in(struct klient* k1){
             char logins[sizeof(content)];
             strncpy(logins, content.c_str(),sizeof(content));
             
-            write_mes(k1,logins,sizeof(content)-1);
+            write_message(k1,logins,sizeof(content)-1);
             delete(k1->message);
         }
         else{
             k1-> flag = 's';
             char temp[] = "bledny login";
-            write_mes(k1,temp,12);
+            write_message(k1,temp,12);
             cout << "Niepoprawny login: " << k1->message << endl;
             delete(k1->message);
-        }
         }
         k1->flag = 'n';
         
@@ -273,21 +250,21 @@ void find_somebody_and_call(struct klient* k1){
         k1->connected = false;
         if(k1->writesocket != 0){
             k1->connected = true;
-            /*const char * name = k1->talk_friend.c_str();
+            const char * name = k1->talk_friend.c_str();
             char* file_name = (char*)name;
             
             int len = lenOfMessage(file_name);
             k1->flag = 't';
-            write_mes(k1,file_name,len);
+            write_message(k1,file_name,len);
             read(k1->readsocket,&(k1->flag),1);
-            read_mes(k1,k1->flag);
+            read_message(k1,k1->flag);
             
-            if(k1->flag == 'k')*/
-                talk_one_thread(k1);//_new(k1);
-            /*else{
+            if(k1->flag == 'k')
+                talk_one_thread(k1);
+            else{
                 k1->connected = false;
                 k1->writesocket = 0;
-            }*/
+            }
             
         }
         //czytanie loginu osoby z ktora chcemy rozmawiac
@@ -296,7 +273,7 @@ void find_somebody_and_call(struct klient* k1){
             //k1->connected = true;
             if(flag == 'c'){
                 k1->connected = true;
-                read_mes(k1, flag);
+                read_message(k1, flag);
                 
                 cout << "dodano kontakty uzytkownika " << k1->login << endl;
                 
@@ -318,7 +295,7 @@ void find_somebody_and_call(struct klient* k1){
                 
             }
             else if (flag == 's') {
-                read_mes(k1, flag);
+                read_message(k1, flag);
                 char login_adresata[k1->length];
                 strcpy(login_adresata, k1->message);
                 cout << "odczytany login adresata: " << login_adresata << endl;
@@ -343,7 +320,7 @@ void find_somebody_and_call(struct klient* k1){
                 if(czy_dostepny){
                     cout << "Polaczono " << k1->login << " i " << k1->talk_friend << endl;
                     char temp[] = "Polaczono!";
-                    write_mes(k1,temp,10);
+                    write_message(k1,temp,10);
                     //char temp1[] = k1->login;
                     //int len = k1->login;
                     //write_mes(friend1,temp,10);
@@ -354,11 +331,11 @@ void find_somebody_and_call(struct klient* k1){
                     cout << "Nie udalo sie polaczyc" << endl;
                     char temp[] = "Nie ma takiego uzytkownika lub jest zajety";
                     k1->flag = 's';
-                    write_mes(k1,temp,42);
+                    write_message(k1,temp,42);
                 }
             }
             else if(flag == 'e'){
-                read_mes(k1, flag);
+                read_message(k1, flag);
                 k1->connected = true;
                 
                 k1->available = false;
@@ -577,3 +554,95 @@ void talk(struct klient* k1){
 
     read_messages(k1);
 }*/
+
+/*void read_mes(struct klient* k1){
+    read(k1->readsocket,&(k1->flag),1);
+    read(k1->readsocket,k1->length_bit,BUFSIZE);
+    k1->length = lenOfMessage(k1->length_bit);
+    //printf("%u\n",k1->length);
+    k1->message = new char[k1->length];
+    unsigned int temp_len = k1->length;
+    unsigned int counter = 0;
+    do{
+        if(temp_len>100){
+            if(read(k1->readsocket,k1->message+counter,100)<0){
+                printf("nie odczytal\n");
+                exit(1);
+            }
+            counter=counter+100;
+            temp_len = temp_len-100;
+            //printf("pobral 100\n");
+        }
+        else{
+            if(read(k1->readsocket,k1->message+counter,temp_len)<0){
+                printf("nie odczytal\n");
+                exit(1);
+            }
+            counter+=temp_len;
+            temp_len=0;
+            //printf("pobral koniec\n");
+        }
+    }while(temp_len!=0);
+    printf("%d\n\n",counter);
+    
+}*/
+
+/*void talk_one_thread_new(struct klient* k1){
+    printf("Rozmowa\n");
+    k1->talk = true;
+    while(k1->talk == true){
+        printf("talk\n");
+        read(k1->readsocket,&(k1->flag),1);
+        printf("odczytano\n");
+        
+        write(k1->writesocket,&(k1->flag),1);
+        read(k1->readsocket,k1->length_bit,BUFSIZE);
+        printf("odczytano2\n");
+        write(k1->writesocket,k1->length_bit,BUFSIZE);
+        k1->length = lenOfMessage(k1->length_bit);
+        //printf("%d\n",k1->length);
+        //printf("%u\n",k1->length);
+        //k1->message = new char[100];
+        
+        char message;
+        printf("%d\n",k1->length);
+        while(read(k1->readsocket,&message,1)){
+                write(k1->writesocket,&message,1);
+            }
+        
+        if(k1->flag == 's')
+             if(k1->message == "exit"){
+                 k1->talk = false;
+                 break;
+             } 
+        
+        
+        
+        
+        /*int counter = k1->length;
+        do{
+            if(counter>100){
+                k1->message = new char[100];
+                if(read(k1->readsocket,k1->message,100)<=0)
+                    printf("error");
+                if(write(k1->writesocket,k1->message,100)<=0)
+                    printf("error");
+                counter = counter - 100;
+                delete(k1->message);
+            }
+            else if(counter>0){
+                //delete(k1->message);
+                k1->message = new char[counter];
+                printf("%d\n",counter);
+                if(read(k1->readsocket,k1->message,counter)<=0)
+                    printf("error");
+                if(write(k1->writesocket,k1->message,counter)<=0)
+                    printf("error");
+                counter=0;
+                delete(k1->message);
+                break;
+            }       
+        }while(counter>0);
+        //delete(k1->message);*/
+   // }
+//}
