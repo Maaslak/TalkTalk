@@ -14,9 +14,6 @@ public class Main {
 
     public static void main(String[] args) {
 
-        byte[] byteBuffer = ByteBuffer.allocate(4).putInt(254).array();
-        int size = ByteBuffer.wrap(byteBuffer).asIntBuffer().get();
-        System.out.println(size);
         nu.pattern.OpenCV.loadLibrary();
         Connect con = new Connect();
         try {

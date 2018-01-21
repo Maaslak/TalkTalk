@@ -70,6 +70,7 @@ public class Microphone implements Runnable {
                     System.exit(-1);
             }
 
+
         }
         microphone.close();
     }
